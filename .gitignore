@@ -1,0 +1,38 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Uploads (archivos subidos por usuarios)
+uploads/images/*
+uploads/videos/*
+uploads/audio/*
+uploads/documents/*
+!uploads/images/.gitkeep
+!uploads/videos/.gitkeep
+!uploads/audio/.gitkeep
+!uploads/documents/.gitkeep
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Coverage
+coverage/
