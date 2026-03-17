@@ -40,4 +40,9 @@ const markAsRead = asyncHandler(async (req, res) => {
   return sendMessage(res, 'Messages marked as read');
 });
 
-module.exports = { listChats, createPrivateChat, getChatById, deleteChat, archiveChat, pinChat, markAsRead };
+const clearHistory = asyncHandler(async (req, res) => {
+  await chatsService.clearChatHistory(parseInt(req.params.chatId, 10), req.user.id);
+  return sendMessage(res, 'Chat history cleared');
+});
+
+module.exports = { listChats, createPrivateChat, getChatById, deleteChat, archiveChat, pinChat, markAsRead, clearHistory };

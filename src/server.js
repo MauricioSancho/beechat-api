@@ -1,8 +1,10 @@
 // dotenv PRIMERO, antes de cualquier otro import
 require('dotenv').config();
 
+const fs   = require('fs');
+const path = require('path');
 const http = require('http');
-const app = require('./app');
+const app  = require('./app');
 const { connect, disconnect } = require('./database/connection');
 const logger = require('./utils/logger');
 
@@ -32,6 +34,12 @@ const httpServer = http.createServer(app);
 // ============================================================
 async function startServer() {
   try {
+    // 0. Crear directorios de uploads si no existen
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+    for (const sub of ['images', 'videos', 'audio', 'documents']) {
+      fs.mkdirSync(path.join(uploadDir, sub), { recursive: true });
+    }
+
     // 1. Conectar a la base de datos primero (fail-fast)
     await connect();
 
@@ -42,6 +50,7 @@ async function startServer() {
       logger.info(`   Environment : ${process.env.NODE_ENV || 'development'}`);
       logger.info(`   Base URL    : ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
       logger.info(`   Health      : http://localhost:${PORT}/api/v1/health`);
+      logger.info(`   Status v2   : message status system active ✓`);
       logger.info('================================================');
     });
   } catch (err) {

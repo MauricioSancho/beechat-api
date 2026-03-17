@@ -26,8 +26,8 @@ const updateGroup = asyncHandler(async (req, res) => {
 const updateGroupAvatar = asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'No image provided' } });
   const avatarUrl = `${process.env.BASE_URL}/uploads/images/${req.file.filename}`;
-  await groupsService.updateGroupAvatar(parseInt(req.params.groupId, 10), req.user.id, avatarUrl);
-  return sendSuccess(res, { avatarUrl });
+  const group = await groupsService.updateGroupAvatar(parseInt(req.params.groupId, 10), req.user.id, avatarUrl);
+  return sendSuccess(res, group);
 });
 
 const addMembers = asyncHandler(async (req, res) => {

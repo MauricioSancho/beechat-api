@@ -17,12 +17,14 @@ const devicesRoutes       = require('./modules/devices/devices.routes');
 const contactsRoutes      = require('./modules/contacts/contacts.routes');
 const chatsRoutes         = require('./modules/chats/chats.routes');
 const { chatMessagesRouter, messagesRouter } = require('./modules/messages/messages.routes');
+const pollsRoutes            = require('./modules/polls/polls.routes');
 const groupsRoutes        = require('./modules/groups/groups.routes');
 const storiesRoutes       = require('./modules/stories/stories.routes');
 const uploadsRoutes       = require('./modules/uploads/uploads.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const adminRoutes         = require('./modules/admin/admin.routes');
 const beeAssistRoutes     = require('./modules/bee_assist/bee_assist.routes');
+const e2eRoutes           = require('./modules/e2e/e2e.routes');
 
 // Middlewares globales
 const { defaultLimiter } = require('./middlewares/rateLimiter.middleware');
@@ -122,6 +124,7 @@ app.use('/api/v1/devices',       devicesRoutes);
 app.use('/api/v1/contacts',      contactsRoutes);
 app.use('/api/v1/chats',                   chatsRoutes);
 app.use('/api/v1/chats/:chatId/messages',  chatMessagesRouter);
+app.use('/api/v1/chats/:chatId/polls',     pollsRoutes);
 app.use('/api/v1/messages',                messagesRouter);
 
 app.use('/api/v1/groups',        groupsRoutes);
@@ -130,6 +133,7 @@ app.use('/api/v1/uploads',       uploadsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/admin',         adminRoutes);
 app.use('/api/v1/bee-assist',    beeAssistRoutes);
+app.use('/api/v1/keys',         e2eRoutes);
 
 // ============================================================
 // Manejo de errores (siempre al final)

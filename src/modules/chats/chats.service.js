@@ -31,7 +31,8 @@ async function createOrGetPrivateChat(userId, targetUserId) {
 async function getChatById(chatId, userId) {
   const chat = await chatsRepo.findById(chatId, userId);
   if (!chat) throw ERRORS.NOT_FOUND('Chat');
-  return chat;
+  const participants = await chatsRepo.findParticipants(chatId);
+  return { ...chat, participants };
 }
 
 async function deleteChat(chatId, userId) {
@@ -60,6 +61,12 @@ async function markChatAsRead(chatId, userId) {
   await chatsRepo.markAllAsRead(chatId, userId);
 }
 
+async function clearChatHistory(chatId, userId) {
+  const isMember = await chatsRepo.isMember(chatId, userId);
+  if (!isMember) throw ERRORS.NOT_FOUND('Chat');
+  await chatsRepo.clearMessages(chatId);
+}
+
 module.exports = {
   listChats,
   createOrGetPrivateChat,
@@ -68,4 +75,5 @@ module.exports = {
   archiveChat,
   pinChat,
   markChatAsRead,
+  clearChatHistory,
 };

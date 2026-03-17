@@ -112,5 +112,6 @@ router.delete('/:chatId',               controller.deleteChat);
 router.patch('/:chatId/archive',        controller.archiveChat);
 router.patch('/:chatId/pin',            controller.pinChat);
 router.patch('/:chatId/read',           controller.markAsRead);
+router.delete('/:chatId/messages',      controller.clearHistory);
 
 module.exports = router;

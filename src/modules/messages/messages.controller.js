@@ -1,3 +1,4 @@
+const path = require('path');
 const messagesService = require('./messages.service');
 const { sendSuccess, sendCreated, sendMessage, sendPaginated, asyncHandler } = require('../../utils/response.helper');
 const { parsePagination } = require('../../utils/pagination.helper');
@@ -12,12 +13,15 @@ const listMessages = asyncHandler(async (req, res) => {
 
 const sendMsg = asyncHandler(async (req, res) => {
   const chatId = parseInt(req.params.chatId, 10);
-  const { content, messageType, replyToId } = req.body;
+  // Accept both camelCase (messageType) and snake_case (message_type) from multipart/JSON clients
+  const content     = req.body.content;
+  const messageType = req.body.messageType  || req.body.message_type;
+  const replyToId   = req.body.replyToId    ?? req.body.reply_to_id;
 
   // Si hay archivo adjunto (multimedia)
   let attachment = null;
   if (req.file) {
-    const typeDir = req.file.destination.split('/').pop();
+    const typeDir = path.basename(req.file.destination);
     const fileUrl = `${process.env.BASE_URL}/uploads/${typeDir}/${req.file.filename}`;
     attachment = {
       fileUrl,

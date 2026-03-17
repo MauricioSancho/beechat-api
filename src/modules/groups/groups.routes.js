@@ -7,7 +7,7 @@ const {
   changeRoleValidator,
 } = require('./groups.validator');
 const authMiddleware = require('../../middlewares/auth.middleware');
-const { uploadImage } = require('../../middlewares/upload.middleware');
+const { uploadAvatar } = require('../../middlewares/upload.middleware');
 
 const router = Router();
 
@@ -187,7 +187,7 @@ router.post('/',                          createGroupValidator,  controller.crea
 router.get('/',                                                  controller.listGroups);
 router.get('/:groupId',                                          controller.getGroupById);
 router.put('/:groupId',                   updateGroupValidator,  controller.updateGroup);
-router.patch('/:groupId/avatar',          uploadImage,           controller.updateGroupAvatar);
+router.patch('/:groupId/avatar',          uploadAvatar,          controller.updateGroupAvatar);
 router.post('/:groupId/members',          addMembersValidator,   controller.addMembers);
 router.delete('/:groupId/members/:userId',                       controller.removeMember);
 router.patch('/:groupId/members/:userId/role', changeRoleValidator, controller.changeMemberRole);

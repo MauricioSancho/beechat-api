@@ -7,7 +7,7 @@ const {
   searchUsersValidator,
 } = require('./users.validator');
 const authMiddleware = require('../../middlewares/auth.middleware');
-const { uploadImage } = require('../../middlewares/upload.middleware');
+const { uploadAvatar } = require('../../middlewares/upload.middleware');
 
 const router = Router();
 router.use(authMiddleware);
@@ -101,7 +101,7 @@ router.use(authMiddleware);
  */
 router.get('/me',           controller.getMe);
 router.put('/me',           updateProfileValidator, controller.updateMe);
-router.patch('/me/avatar',  uploadImage,            controller.updateAvatar);
+router.patch('/me/avatar',  uploadAvatar,           controller.updateAvatar);
 router.patch('/me/bio',     updateBioValidator,     controller.updateBio);
 router.patch('/me/phone',   updatePhoneValidator,   controller.updatePhone);
 router.get('/search',       searchUsersValidator,   controller.searchUsers);

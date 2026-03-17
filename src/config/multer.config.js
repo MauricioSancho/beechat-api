@@ -19,7 +19,7 @@ function createDiskStorage(subDir) {
 
 // ---- Filtros por tipo MIME ----
 function imageFilter(req, file, cb) {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'application/octet-stream'];
   cb(null, allowed.includes(file.mimetype));
 }
 
@@ -29,7 +29,7 @@ function videoFilter(req, file, cb) {
 }
 
 function audioFilter(req, file, cb) {
-  const allowed = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4'];
+  const allowed = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'application/octet-stream'];
   cb(null, allowed.includes(file.mimetype));
 }
 

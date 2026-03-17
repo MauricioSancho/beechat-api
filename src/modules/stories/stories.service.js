@@ -9,7 +9,31 @@ async function createStory(userId, { contentType, contentUrl, textContent, bgCol
 }
 
 async function listStories(userId) {
-  return storiesRepo.findVisible(userId);
+  const rows = await storiesRepo.findVisible(userId);
+  const groupMap = new Map();
+  for (const row of rows) {
+    if (!groupMap.has(row.user_id)) {
+      groupMap.set(row.user_id, {
+        user_id: row.user_id,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+        stories: [],
+      });
+    }
+    groupMap.get(row.user_id).stories.push({
+      id: row.id,
+      user_id: row.user_id,
+      content_type: row.content_type,
+      content_url: row.content_url,
+      text_content: row.text_content,
+      bg_color: row.bg_color,
+      expires_at: row.expires_at,
+      created_at: row.created_at,
+      view_count: row.view_count,
+      viewed_by_me: row.viewed_by_me === 1,
+    });
+  }
+  return Array.from(groupMap.values());
 }
 
 async function deleteStory(storyId, userId) {

@@ -7,6 +7,7 @@ const {
   listMessagesValidator,
 } = require('./messages.validator');
 const authMiddleware = require('../../middlewares/auth.middleware');
+const { uploadImage, uploadAudio } = require('../../middlewares/upload.middleware');
 
 // ---- Router A: Montado en /api/v1/chats/:chatId/messages (mergeParams para acceder a :chatId) ----
 const chatMessagesRouter = Router({ mergeParams: true });
@@ -112,8 +113,9 @@ chatMessagesRouter.use(authMiddleware);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 
-chatMessagesRouter.get('/',  listMessagesValidator, controller.listMessages);
-chatMessagesRouter.post('/', sendMessageValidator,  controller.sendMsg);
+chatMessagesRouter.get('/',        listMessagesValidator,  controller.listMessages);
+chatMessagesRouter.post('/',       uploadImage,  sendMessageValidator, controller.sendMsg);
+chatMessagesRouter.post('/audio',  uploadAudio,  sendMessageValidator, controller.sendMsg);
 
 // ---- Router B: Montado en /api/v1/messages (operaciones sobre mensajes individuales) ----
 const messagesRouter = Router();

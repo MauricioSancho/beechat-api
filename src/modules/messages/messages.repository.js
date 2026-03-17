@@ -1,6 +1,6 @@
 const { query, queryOne, execute, sql } = require('../../database/query');
 
-async function findByChatId(chatId, { offset, limit }) {
+async function findByChatId(chatId, userId, { offset, limit }) {
   const [rows, countRow] = await Promise.all([
     query(
       `SELECT
@@ -12,16 +12,37 @@ async function findByChatId(chatId, { offset, limit }) {
          (SELECT file_url, file_type, file_size, file_name
           FROM MessageAttachments WHERE message_id = m.id
           FOR JSON PATH) AS attachments,
-         -- Estado del mensaje para el remitente
-         ms.status AS my_status
+         -- Estado: si soy el remitente → estado agregado entre destinatarios
+         --   'read'      = todos leyeron       (MIN = 3)
+         --   'delivered' = al menos uno recibió (MAX >= 2)
+         --   'sent'      = nadie ha cargado aún
+         --         si soy destinatario → mi propio estado
+         CASE
+           WHEN m.sender_id = @userId THEN
+             COALESCE(
+               (SELECT CASE
+                  WHEN MIN(CASE ms_r.status WHEN 'read'      THEN 3
+                                            WHEN 'delivered' THEN 2
+                                            ELSE 1 END) = 3 THEN 'read'
+                  WHEN MAX(CASE ms_r.status WHEN 'read'      THEN 3
+                                            WHEN 'delivered' THEN 2
+                                            ELSE 1 END) >= 2 THEN 'delivered'
+                  ELSE 'sent'
+                END
+                FROM MessageStatus ms_r
+                WHERE ms_r.message_id = m.id AND ms_r.user_id <> m.sender_id),
+               'sent')
+           ELSE COALESCE(ms.status, 'sent')
+         END AS status
        FROM Messages m
        JOIN Users u ON u.id = m.sender_id
-       LEFT JOIN MessageStatus ms ON ms.message_id = m.id AND ms.user_id = m.sender_id
+       LEFT JOIN MessageStatus ms ON ms.message_id = m.id AND ms.user_id = @userId
        WHERE m.chat_id = @chatId AND m.is_deleted = 0
        ORDER BY m.created_at DESC
        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`,
       [
         { name: 'chatId', type: sql.Int, value: chatId },
+        { name: 'userId', type: sql.Int, value: userId },
         { name: 'offset', type: sql.Int, value: offset },
         { name: 'limit',  type: sql.Int, value: limit },
       ]
@@ -113,6 +134,24 @@ async function softDelete(messageId, senderId) {
   );
 }
 
+async function markAsDelivered(chatId, userId) {
+  // Actualiza a 'delivered' los mensajes que el receptor ya cargó pero no ha marcado como leídos
+  return execute(
+    `UPDATE ms
+     SET ms.status = 'delivered', ms.updated_at = GETUTCDATE()
+     FROM MessageStatus ms
+     JOIN Messages m ON m.id = ms.message_id
+     WHERE m.chat_id = @chatId
+       AND ms.user_id = @userId
+       AND ms.status = 'sent'
+       AND m.sender_id <> @userId`,
+    [
+      { name: 'chatId', type: sql.Int, value: chatId },
+      { name: 'userId', type: sql.Int, value: userId },
+    ]
+  );
+}
+
 async function updateChatTimestamp(chatId) {
   return execute(
     `UPDATE Chats SET updated_at = GETUTCDATE() WHERE id = @chatId`,
@@ -126,6 +165,7 @@ module.exports = {
   create,
   createAttachment,
   createStatus,
+  markAsDelivered,
   updateContent,
   softDelete,
   updateChatTimestamp,

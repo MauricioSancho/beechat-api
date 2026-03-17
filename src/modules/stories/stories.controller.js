@@ -1,3 +1,4 @@
+const path = require('path');
 const storiesService = require('./stories.service');
 const { sendSuccess, sendCreated, sendMessage, asyncHandler } = require('../../utils/response.helper');
 
@@ -6,7 +7,7 @@ const createStory = asyncHandler(async (req, res) => {
 
   let contentUrl = null;
   if (req.file) {
-    const typeDir = req.file.destination.split('/').pop();
+    const typeDir = path.basename(req.file.destination);
     contentUrl = `${process.env.BASE_URL}/uploads/${typeDir}/${req.file.filename}`;
   }
 

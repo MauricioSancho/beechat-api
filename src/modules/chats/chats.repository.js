@@ -57,17 +57,36 @@ async function findUserChats(userId) {
        CASE WHEN c.type = 'private' THEN other.avatar_url ELSE g.avatar_url END AS avatar_url,
        -- Último mensaje
        lm.id AS last_message_id,
+       lm.sender_id AS last_message_sender_id,
        lm.content AS last_message_content,
        lm.message_type AS last_message_type,
        lm.created_at AS last_message_at,
        lm_sender.display_name AS last_message_sender,
+       -- Si yo soy el remitente → mínimo entre destinatarios; si soy receptor → mi propio estado
+       CASE
+         WHEN lm.sender_id = @userId THEN
+           COALESCE(
+             (SELECT CASE
+                WHEN MIN(CASE ms_r.status WHEN 'read'      THEN 3
+                                          WHEN 'delivered' THEN 2
+                                          ELSE 1 END) = 3 THEN 'read'
+                WHEN MAX(CASE ms_r.status WHEN 'read'      THEN 3
+                                          WHEN 'delivered' THEN 2
+                                          ELSE 1 END) >= 2 THEN 'delivered'
+                ELSE 'sent'
+              END
+              FROM MessageStatus ms_r
+              WHERE ms_r.message_id = lm.id AND ms_r.user_id <> lm.sender_id),
+             'sent')
+         ELSE COALESCE(ms_lm.status, 'sent')
+       END AS last_message_status,
        -- Para chats privados: datos del otro usuario
        other.id AS other_user_id, other.uuid AS other_uuid,
        other.display_name AS other_display_name,
        other.avatar_url AS other_avatar_url,
        other.last_seen AS other_last_seen,
        -- Para grupos
-       g.name AS group_name, g.description AS group_description, g.avatar_url AS group_avatar_url,
+       g.id AS group_id, g.name AS group_name, g.description AS group_description, g.avatar_url AS group_avatar_url,
        -- Conteo no leídos
        (SELECT COUNT(*)
         FROM Messages m2
@@ -82,6 +101,7 @@ async function findUserChats(userId) {
        ORDER BY created_at DESC
      )
      LEFT JOIN Users lm_sender ON lm_sender.id = lm.sender_id
+     LEFT JOIN MessageStatus ms_lm ON ms_lm.message_id = lm.id AND ms_lm.user_id = @userId
      OUTER APPLY (
        SELECT TOP 1 cm2.user_id
        FROM ChatMembers cm2
@@ -101,14 +121,38 @@ async function findUserChats(userId) {
 async function findById(chatId, userId) {
   return queryOne(
     `SELECT c.id, c.uuid, c.type, c.created_at,
-            cm.is_archived, cm.is_pinned, cm.role
+            cm.is_archived, cm.is_pinned, cm.role,
+            CASE WHEN c.type = 'private' THEN other.display_name ELSE g.name END AS name,
+            CASE WHEN c.type = 'private' THEN other.avatar_url  ELSE g.avatar_url END AS avatar_url,
+            g.id AS group_id, g.description AS group_description
      FROM Chats c
      JOIN ChatMembers cm ON cm.chat_id = c.id AND cm.user_id = @userId AND cm.is_active = 1
+     OUTER APPLY (
+       SELECT TOP 1 cm2.user_id
+       FROM ChatMembers cm2
+       WHERE cm2.chat_id = c.id
+         AND cm2.user_id <> @userId
+         AND cm2.is_active = 1
+         AND c.type = 'private'
+     ) cm_other
+     LEFT JOIN Users other ON other.id = cm_other.user_id
+     LEFT JOIN Groups g ON g.chat_id = c.id AND c.type = 'group'
      WHERE c.id = @chatId AND c.deleted_at IS NULL`,
     [
       { name: 'chatId', type: sql.Int, value: chatId },
       { name: 'userId', type: sql.Int, value: userId },
     ]
+  );
+}
+
+async function findParticipants(chatId) {
+  return query(
+    `SELECT u.id, u.display_name, u.avatar_url, cm.role
+     FROM ChatMembers cm
+     JOIN Users u ON u.id = cm.user_id
+     WHERE cm.chat_id = @chatId AND cm.is_active = 1
+     ORDER BY CASE cm.role WHEN 'admin' THEN 0 ELSE 1 END, u.display_name ASC`,
+    [{ name: 'chatId', type: sql.Int, value: chatId }]
   );
 }
 
@@ -150,15 +194,31 @@ async function setPinned(chatId, userId, pinned) {
 
 async function markAllAsRead(chatId, userId) {
   return execute(
-    `UPDATE ms
-     SET ms.status = 'read', ms.updated_at = GETUTCDATE()
-     FROM MessageStatus ms
-     JOIN Messages m ON m.id = ms.message_id
-     WHERE m.chat_id = @chatId AND ms.user_id = @userId AND ms.status <> 'read'`,
+    `MERGE MessageStatus AS target
+     USING (
+       SELECT m.id AS message_id
+       FROM Messages m
+       WHERE m.chat_id = @chatId AND m.is_deleted = 0
+     ) AS source
+     ON target.message_id = source.message_id AND target.user_id = @userId
+     WHEN MATCHED AND target.status <> 'read' THEN
+       UPDATE SET target.status = 'read', target.updated_at = GETUTCDATE()
+     WHEN NOT MATCHED THEN
+       INSERT (message_id, user_id, status, updated_at)
+       VALUES (source.message_id, @userId, 'read', GETUTCDATE());`,
     [
       { name: 'chatId', type: sql.Int, value: chatId },
       { name: 'userId', type: sql.Int, value: userId },
     ]
+  );
+}
+
+async function clearMessages(chatId) {
+  return execute(
+    `UPDATE Messages
+     SET is_deleted = 1, content = NULL, updated_at = GETUTCDATE()
+     WHERE chat_id = @chatId AND is_deleted = 0`,
+    [{ name: 'chatId', type: sql.Int, value: chatId }]
   );
 }
 
@@ -179,9 +239,11 @@ module.exports = {
   createPrivateChat,
   findUserChats,
   findById,
+  findParticipants,
   softDelete,
   setArchived,
   setPinned,
   markAllAsRead,
+  clearMessages,
   isMember,
 };

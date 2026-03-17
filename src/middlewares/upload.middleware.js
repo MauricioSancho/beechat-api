@@ -32,8 +32,9 @@ function wrapMulter(multerInstance, fieldName) {
 }
 
 const uploadImage = wrapMulter(imageUpload, 'file');
+const uploadAvatar = wrapMulter(imageUpload, 'avatar');
 const uploadVideo = wrapMulter(videoUpload, 'file');
 const uploadAudio = wrapMulter(audioUpload, 'file');
 const uploadDocument = wrapMulter(documentUpload, 'file');
 
-module.exports = { uploadImage, uploadVideo, uploadAudio, uploadDocument };
+module.exports = { uploadImage, uploadAvatar, uploadVideo, uploadAudio, uploadDocument };

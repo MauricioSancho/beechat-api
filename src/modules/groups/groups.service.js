@@ -35,6 +35,9 @@ async function updateGroupAvatar(groupId, userId, avatarUrl) {
   if (role !== 'admin') throw ERRORS.FORBIDDEN('Only admins can change the group avatar');
 
   await groupsRepo.updateAvatar(groupId, avatarUrl);
+  const group = await groupsRepo.findById(groupId, userId);
+  const members = await groupsRepo.findMembers(groupId);
+  return { ...group, members };
 }
 
 async function addMembers(groupId, adminId, userIds) {

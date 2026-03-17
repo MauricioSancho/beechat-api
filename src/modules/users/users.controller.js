@@ -21,7 +21,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
   const avatarUrl = `${process.env.BASE_URL}/uploads/images/${req.file.filename}`;
   const user = await usersService.updateAvatar(req.user.id, avatarUrl);
-  return sendSuccess(res, { avatarUrl, user });
+  return sendSuccess(res, user);
 });
 
 const updateBio = asyncHandler(async (req, res) => {
