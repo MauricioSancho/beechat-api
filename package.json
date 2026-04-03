@@ -9,13 +9,21 @@
     "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch"
   },
-  "keywords": ["beechat", "messaging", "api", "nodejs", "express", "sqlserver"],
+  "keywords": [
+    "beechat",
+    "messaging",
+    "api",
+    "nodejs",
+    "express",
+    "sqlserver"
+  ],
   "author": "BeeChat Team",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@vonage/server-sdk": "^3.27.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -31,7 +39,6 @@
     "nodemailer": "^6.9.9",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "twilio": "^5.3.5",
     "uuid": "^9.0.0",
     "winston": "^3.11.0"
   },

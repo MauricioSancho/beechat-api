@@ -123,7 +123,13 @@ async function register({ phone, email, username, password, display_name }) {
 }
 
 async function login({ identifier, password }) {
-  const user = await authRepo.findUserByIdentifier(identifier);
+  // Normalizar teléfonos: quitar espacios y guiones para buscar en formato E.164
+  // Ej: "+506 63672990" → "+50663672990"
+  const normalizedIdentifier = identifier.startsWith('+')
+    ? identifier.replace(/[\s\-]/g, '')
+    : identifier;
+
+  const user = await authRepo.findUserByIdentifier(normalizedIdentifier);
   if (!user) throw ERRORS.UNAUTHORIZED('Invalid credentials');
 
   if (!user.is_active) throw ERRORS.FORBIDDEN('Account is deactivated');

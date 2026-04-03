@@ -1,35 +1,36 @@
 /**
- * Servicio SMS con Twilio.
+ * Servicio SMS con Vonage.
  *
- * Si TWILIO_ACCOUNT_SID está en el .env → envía SMS real.
- * Si no está configurado    → imprime el código en consola (modo dev).
+ * Si VONAGE_API_KEY y VONAGE_API_SECRET están en el .env → envía SMS real.
+ * Si no están configurados → imprime el código en consola (modo dev).
  *
- * Para obtener credenciales Twilio (gratis):
- *   1. https://www.twilio.com/try-twilio  (solo requiere email)
- *   2. Verificar tu número de teléfono
- *   3. Copiar Account SID + Auth Token del dashboard
- *   4. El número trial asignado (ej. +15005550006) → TWILIO_PHONE_FROM
- *   5. Pegar los 3 valores en .env
+ * Cómo obtener credenciales Vonage:
+ *   1. https://ui.idp.vonage.com/ui/auth/registration  (registro)
+ *   2. En el dashboard → copiar API Key y API Secret
+ *   3. VONAGE_FROM puede ser tu número comprado o un nombre alfanumérico (ej: "BeeChat")
+ *      Nota: los nombres alfanuméricos no funcionan en todos los países (ej. USA no los soporta)
+ *   4. Pegar los 3 valores en .env
  */
 
 const logger = require('./logger');
 
-let twilioClient = null;
+let vonageClient = null;
 
-function getTwilioClient() {
-  if (twilioClient) return twilioClient;
+function getVonageClient() {
+  if (vonageClient) return vonageClient;
 
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+  if (!process.env.VONAGE_API_KEY || !process.env.VONAGE_API_SECRET) {
     return null;
   }
 
-  const twilio = require('twilio');
-  twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  );
-  logger.info(`📱 SMS (Twilio) configurado → desde ${process.env.TWILIO_PHONE_FROM}`);
-  return twilioClient;
+  const { Vonage } = require('@vonage/server-sdk');
+  vonageClient = new Vonage({
+    apiKey:    process.env.VONAGE_API_KEY,
+    apiSecret: process.env.VONAGE_API_SECRET,
+  });
+
+  logger.info(`📱 SMS (Vonage) configurado → desde ${process.env.VONAGE_FROM}`);
+  return vonageClient;
 }
 
 /**
@@ -39,25 +40,29 @@ function getTwilioClient() {
  * @param {string} opts.code  - Código de 6 dígitos
  */
 async function sendSmsVerificationCode({ to, code }) {
-  const client = getTwilioClient();
+  const client = getVonageClient();
 
   if (!client) {
-    // Sin Twilio configurado → mostrar en consola (útil en desarrollo)
+    // Sin Vonage configurado → mostrar en consola (útil en desarrollo)
     logger.info(`📱 [SMS DEV] Para ${to}: tu código es ${code} (válido 15 min)`);
     return;
   }
 
-  try {
-    await client.messages.create({
-      body: `Tu código de verificación BeeChat es: ${code}. Válido por 15 minutos. No lo compartas.`,
-      from: process.env.TWILIO_PHONE_FROM,
-      to,
-    });
-    logger.info(`📱 SMS enviado a ${to}`);
-  } catch (err) {
-    logger.error(`📱 SMS error [${err.code}]: ${err.message}`);
+  const response = await client.sms.send({
+    to,
+    from: process.env.VONAGE_FROM,
+    text: `Tu código de verificación BeeChat es: ${code}. Válido por 15 minutos. No lo compartas.`,
+  });
+
+  const msg = response.messages[0];
+
+  if (msg.status !== '0') {
+    const err = new Error(`Vonage SMS error [${msg.status}]: ${msg['error-text']}`);
+    logger.error(err.message);
     throw err;
   }
+
+  logger.info(`📱 SMS enviado a ${to} (id: ${msg['message-id']})`);
 }
 
 module.exports = { sendSmsVerificationCode };

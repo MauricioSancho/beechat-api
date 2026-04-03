@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C /c/Users/Ronald/beechat_projects/beechat-api log --oneline --all)"
+      "Bash(git -C /c/Users/Ronald/beechat_projects/beechat-api log --oneline --all)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3005\")",
+      "Bash(node -e \"const bcrypt = require\\(''bcryptjs''\\); bcrypt.hash\\(''Esteban10!'', 12\\).then\\(h => console.log\\(h\\)\\)\")",
+      "Bash(node -e \"const bcrypt = require\\(''bcryptjs''\\); bcrypt.hash\\(''Ronald10!'', 12\\).then\\(h => console.log\\(h\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Ronald\\beechat_projects\\beechat-api"
     ]
   }
 }

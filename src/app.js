@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
@@ -17,7 +18,7 @@ const devicesRoutes       = require('./modules/devices/devices.routes');
 const contactsRoutes      = require('./modules/contacts/contacts.routes');
 const chatsRoutes         = require('./modules/chats/chats.routes');
 const { chatMessagesRouter, messagesRouter } = require('./modules/messages/messages.routes');
-const pollsRoutes            = require('./modules/polls/polls.routes');
+const pollsRoutes         = require('./modules/polls/polls.routes');
 const groupsRoutes        = require('./modules/groups/groups.routes');
 const storiesRoutes       = require('./modules/stories/stories.routes');
 const uploadsRoutes       = require('./modules/uploads/uploads.routes');
@@ -33,23 +34,41 @@ const errorMiddleware     = require('./middlewares/error.middleware');
 
 const app = express();
 
+// Rutas útiles del proyecto
+const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+const publicDir = path.resolve(__dirname, '../public');
+const publicIndexPath = path.join(publicDir, 'index.html');
+
 // ============================================================
 // Seguridad
 // ============================================================
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
 
 // CORS
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3001')
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  'http://localhost:3001,http://localhost:3000,http://localhost:3010'
+)
   .split(',')
-  .map((o) => o.trim());
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Permitir herramientas sin origen (Postman, curl) en desarrollo
-      if (!origin || process.env.NODE_ENV === 'development') return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      if (!origin || process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
   })
@@ -72,7 +91,6 @@ if (process.env.NODE_ENV !== 'test') {
 // ============================================================
 // Archivos estáticos (uploads servidos públicamente)
 // ============================================================
-const uploadDir = process.env.UPLOAD_DIR || 'uploads';
 app.use('/uploads', express.static(path.resolve(uploadDir)));
 
 // ============================================================
@@ -118,27 +136,50 @@ app.get('/api/v1/health', (req, res) => {
 // ============================================================
 // Rutas API v1
 // ============================================================
-app.use('/api/v1/auth',          authRoutes);
-app.use('/api/v1/users',         usersRoutes);
-app.use('/api/v1/devices',       devicesRoutes);
-app.use('/api/v1/contacts',      contactsRoutes);
-app.use('/api/v1/chats',                   chatsRoutes);
-app.use('/api/v1/chats/:chatId/messages',  chatMessagesRouter);
-app.use('/api/v1/chats/:chatId/polls',     pollsRoutes);
-app.use('/api/v1/messages',                messagesRouter);
+app.use('/api/v1/auth',                   authRoutes);
+app.use('/api/v1/users',                  usersRoutes);
+app.use('/api/v1/devices',                devicesRoutes);
+app.use('/api/v1/contacts',               contactsRoutes);
+app.use('/api/v1/chats',                  chatsRoutes);
+app.use('/api/v1/chats/:chatId/messages', chatMessagesRouter);
+app.use('/api/v1/chats/:chatId/polls',    pollsRoutes);
+app.use('/api/v1/messages',               messagesRouter);
+app.use('/api/v1/groups',                 groupsRoutes);
+app.use('/api/v1/stories',                storiesRoutes);
+app.use('/api/v1/uploads',                uploadsRoutes);
+app.use('/api/v1/notifications',          notificationsRoutes);
+app.use('/api/v1/admin',                  adminRoutes);
+app.use('/api/v1/bee-assist',             beeAssistRoutes);
+app.use('/api/v1/keys',                   e2eRoutes);
 
-app.use('/api/v1/groups',        groupsRoutes);
-app.use('/api/v1/stories',       storiesRoutes);
-app.use('/api/v1/uploads',       uploadsRoutes);
-app.use('/api/v1/notifications', notificationsRoutes);
-app.use('/api/v1/admin',         adminRoutes);
-app.use('/api/v1/bee-assist',    beeAssistRoutes);
-app.use('/api/v1/keys',         e2eRoutes);
+// ============================================================
+// Frontend Flutter web servido por Express
+// ============================================================
+if (fs.existsSync(publicDir)) {
+  app.use(
+    express.static(publicDir, {
+      index: false,
+      maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+    })
+  );
+
+  // Fallback SPA: cualquier ruta que NO sea /api ni /uploads
+  app.get(/^(?!\/api(?:\/|$))(?!\/uploads(?:\/|$)).*/, (req, res, next) => {
+    if (!fs.existsSync(publicIndexPath)) {
+      return next();
+    }
+    return res.sendFile(publicIndexPath);
+  });
+}
+
+// ============================================================
+// 404 solo para API
+// ============================================================
+app.use('/api', notFoundMiddleware);
 
 // ============================================================
 // Manejo de errores (siempre al final)
 // ============================================================
-app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
 module.exports = app;
