@@ -60,6 +60,13 @@ async function removeMember(groupId, adminId, targetUserId) {
   if (group.my_role !== 'admin') throw ERRORS.FORBIDDEN('Only admins can remove members');
   if (targetUserId === adminId) throw ERRORS.BAD_REQUEST('Use the leave endpoint to exit the group');
 
+  // Un admin no puede eliminar a otro admin — debe quitarle el rol primero
+  const targetRole = await groupsRepo.getMemberRole(groupId, targetUserId);
+  if (!targetRole) throw ERRORS.NOT_FOUND('Member not found in this group');
+  if (targetRole === 'admin') {
+    throw ERRORS.FORBIDDEN('Cannot remove an admin. Demote them to member first.');
+  }
+
   await groupsRepo.removeMember(groupId, group.chat_id, targetUserId);
 }
 

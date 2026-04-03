@@ -54,7 +54,7 @@ async function startServer() {
       logger.info('================================================');
     });
   } catch (err) {
-    logger.error('Failed to start server:', err.message);
+    logger.error('Failed to start server: ' + JSON.stringify({ message: err.message, code: err.code, name: err.name, stack: err.stack?.split('\n')[0] }));
     process.exit(1);
   }
 }

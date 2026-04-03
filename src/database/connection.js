@@ -21,7 +21,7 @@ async function connect() {
 
     return pool;
   } catch (err) {
-    logger.error('❌ SQL Server connection failed:', err.message);
+    logger.error(`❌ SQL Server connection failed: ${err.message || err.name || JSON.stringify(err)}`);
     throw err;
   }
 }
