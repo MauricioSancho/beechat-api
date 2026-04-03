@@ -58,4 +58,14 @@ async function getMyKeyBundle(userId) {
   };
 }
 
-module.exports = { uploadKeyBundle, getKeyBundle, getKeyBundlesBatch, getMyKeyBundle };
+/**
+ * Explicitly rotate a user's key bundle (REQ-5h).
+ * Behaves identically to uploadKeyBundle but is a named action for clarity.
+ */
+async function rotateKeyBundle(userId, identityKey) {
+  await e2eRepo.upsertKeyBundle(userId, identityKey);
+  const bundle = await e2eRepo.findKeyBundle(userId);
+  return { rotated: true, keyVersion: bundle.key_version };
+}
+
+module.exports = { uploadKeyBundle, getKeyBundle, getKeyBundlesBatch, getMyKeyBundle, rotateKeyBundle };

@@ -42,4 +42,16 @@ const getBatchBundles = asyncHandler(async (req, res) => {
   return sendSuccess(res, bundles);
 });
 
-module.exports = { uploadBundle, getMyBundle, getUserBundle, getBatchBundles };
+/**
+ * POST /api/v1/keys/rotate
+ * Explicitly rotate this device's identity key pair (REQ-5h).
+ * Body: { identityKey: "base64 new public key" }
+ * Increments key_version on the server so peers can detect the change (REQ-5i).
+ */
+const rotateBundle = asyncHandler(async (req, res) => {
+  const { identityKey } = req.body;
+  const result = await e2eService.rotateKeyBundle(req.user.id, identityKey);
+  return sendSuccess(res, result);
+});
+
+module.exports = { uploadBundle, getMyBundle, getUserBundle, getBatchBundles, rotateBundle };

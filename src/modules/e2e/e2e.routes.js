@@ -73,5 +73,8 @@ router.post('/bundle',          uploadBundleValidator,    controller.uploadBundl
 router.get('/bundle/me',                                   controller.getMyBundle);
 router.post('/bundle/batch',    getBatchBundlesValidator,  controller.getBatchBundles);
 router.get('/bundle/:userId',   getUserBundleValidator,    controller.getUserBundle);
+// REQ-5h: Rotación explícita de claves — incrementa key_version para que
+// los pares puedan detectar el cambio de dispositivo (REQ-5i)
+router.post('/rotate',          uploadBundleValidator,    controller.rotateBundle);
 
 module.exports = router;
