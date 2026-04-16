@@ -18,7 +18,7 @@ const defaultLimiter = rateLimit({
 // ---- Rate Limiter Estricto para Auth ----
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10,                   // máx 10 intentos de login/register
+  max: 5000,                   // máx 5000 intentos de login/register
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -33,7 +33,7 @@ const authLimiter = rateLimit({
 // ---- Rate Limiter para Bee Assist (IA) ----
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 10,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
