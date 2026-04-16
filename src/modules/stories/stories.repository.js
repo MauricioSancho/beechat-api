@@ -41,7 +41,8 @@ async function findVisible(userId) {
        AND s.user_id NOT IN (
          SELECT muted_user_id FROM StoryMutes WHERE user_id = @userId
        )
-     ORDER BY u.id, s.created_at DESC`,
+     ORDER BY (SELECT MAX(s2.created_at) FROM Stories s2 WHERE s2.user_id = u.id AND s2.is_active = 1) DESC,
+              s.created_at ASC`,
     [{ name: 'userId', type: sql.Int, value: userId }]
   );
 }
@@ -108,4 +109,17 @@ async function unmute(userId, mutedUserId) {
   );
 }
 
-module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute };
+/**
+ * Desactiva todas las stories cuyo expires_at ya pasó.
+ * Devuelve el número de filas afectadas.
+ */
+async function deactivateExpired() {
+  const result = await execute(
+    `UPDATE Stories
+     SET is_active = 0
+     WHERE is_active = 1 AND expires_at <= GETUTCDATE()`
+  );
+  return result?.rowsAffected?.[0] ?? 0;
+}
+
+module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute, deactivateExpired };

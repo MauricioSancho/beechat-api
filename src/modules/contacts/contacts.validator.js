@@ -26,4 +26,10 @@ const addContactValidator = [
   validate,
 ];
 
-module.exports = { addContactValidator };
+const updateNicknameValidator = [
+  body('nickname')
+    .optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage('Nickname cannot exceed 100 characters'),
+  validate,
+];
+
+module.exports = { addContactValidator, updateNicknameValidator };

@@ -17,6 +17,12 @@ const removeContact = asyncHandler(async (req, res) => {
   return sendMessage(res, 'Contact removed');
 });
 
+const updateNickname = asyncHandler(async (req, res) => {
+  const { nickname } = req.body;
+  await contactsService.updateNickname(req.user.id, parseInt(req.params.contactId, 10), nickname);
+  return sendMessage(res, 'Nickname updated');
+});
+
 const blockContact = asyncHandler(async (req, res) => {
   await contactsService.blockContact(req.user.id, parseInt(req.params.contactId, 10));
   return sendMessage(res, 'User blocked');
@@ -27,4 +33,4 @@ const unblockContact = asyncHandler(async (req, res) => {
   return sendMessage(res, 'User unblocked');
 });
 
-module.exports = { listContacts, addContact, removeContact, blockContact, unblockContact };
+module.exports = { listContacts, addContact, removeContact, updateNickname, blockContact, unblockContact };

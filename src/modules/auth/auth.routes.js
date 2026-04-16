@@ -1,6 +1,9 @@
 const { Router } = require('express');
 const controller = require('./auth.controller');
-const { registerValidator, loginValidator, verifyAccountValidator } = require('./auth.validator');
+const {
+  registerValidator, loginValidator, verifyAccountValidator,
+  forgotPasswordValidator, verifyResetCodeValidator, resetPasswordValidator,
+} = require('./auth.validator');
 const authMiddleware = require('../../middlewares/auth.middleware');
 const { authLimiter } = require('../../middlewares/rateLimiter.middleware');
 
@@ -173,5 +176,74 @@ router.post('/verify-account', authMiddleware, verifyAccountValidator, controlle
  *         description: Código reenviado
  */
 router.post('/resend-verification', authMiddleware, authLimiter, controller.resendVerification);
+
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Solicitar código de recuperación de contraseña (email + SMS opcional)
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [identifier]
+ *             properties:
+ *               identifier:
+ *                 type: string
+ *                 description: Email, teléfono o username registrado
+ *                 example: "+50663672990"
+ *     responses:
+ *       200:
+ *         description: Código enviado (respuesta genérica por seguridad)
+ *
+ * /auth/verify-reset-code:
+ *   post:
+ *     summary: Verificar código OTP y obtener resetToken
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [identifier, code]
+ *             properties:
+ *               identifier: { type: string }
+ *               code: { type: string, example: "123456" }
+ *     responses:
+ *       200:
+ *         description: Código válido — devuelve resetToken
+ *       400:
+ *         description: Código inválido o expirado
+ *
+ * /auth/reset-password:
+ *   post:
+ *     summary: Establecer nueva contraseña con el resetToken
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [resetToken, newPassword]
+ *             properties:
+ *               resetToken: { type: string }
+ *               newPassword: { type: string, format: password }
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida
+ *       401:
+ *         description: Token inválido o expirado
+ */
+router.post('/forgot-password',    authLimiter, forgotPasswordValidator,    controller.forgotPassword);
+router.post('/verify-reset-code',  authLimiter, verifyResetCodeValidator,   controller.verifyResetCode);
+router.post('/reset-password',     authLimiter, resetPasswordValidator,     controller.resetPassword);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const controller = require('./contacts.controller');
-const { addContactValidator } = require('./contacts.validator');
+const { addContactValidator, updateNicknameValidator } = require('./contacts.validator');
 const authMiddleware = require('../../middlewares/auth.middleware');
 
 const router = Router();
@@ -74,10 +74,11 @@ router.use(authMiddleware);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 
-router.get('/',                         controller.listContacts);
-router.post('/',    addContactValidator, controller.addContact);
-router.delete('/:contactId',            controller.removeContact);
-router.post('/:contactId/block',        controller.blockContact);
-router.delete('/:contactId/block',      controller.unblockContact);
+router.get('/',                                      controller.listContacts);
+router.post('/',         addContactValidator,        controller.addContact);
+router.delete('/:contactId',                         controller.removeContact);
+router.patch('/:contactId', updateNicknameValidator, controller.updateNickname);
+router.post('/:contactId/block',                     controller.blockContact);
+router.delete('/:contactId/block',                   controller.unblockContact);
 
 module.exports = router;

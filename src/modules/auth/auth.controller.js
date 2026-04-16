@@ -72,4 +72,26 @@ const resendVerification = asyncHandler(async (req, res) => {
   return sendMessage(res, 'Verification code sent to your email');
 });
 
-module.exports = { register, login, logout, refreshToken, verifyAccount, resendVerification };
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { identifier } = req.body;
+  await authService.forgotPassword({ identifier });
+  // Siempre 200 para no revelar si el usuario existe
+  return sendMessage(res, 'Si el usuario existe, recibirá un código por email o SMS.');
+});
+
+const verifyResetCode = asyncHandler(async (req, res) => {
+  const { identifier, code } = req.body;
+  const result = await authService.verifyResetCode({ identifier, code });
+  return sendSuccess(res, result);
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+  await authService.resetPassword({ resetToken, newPassword });
+  return sendMessage(res, 'Contraseña restablecida correctamente. Inicia sesión de nuevo.');
+});
+
+module.exports = {
+  register, login, logout, refreshToken, verifyAccount, resendVerification,
+  forgotPassword, verifyResetCode, resetPassword,
+};

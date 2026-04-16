@@ -63,4 +63,30 @@ async function findKeyBundlesBatch(userIds) {
   );
 }
 
-module.exports = { upsertKeyBundle, findKeyBundle, hasKeyBundle, findKeyBundlesBatch };
+/**
+ * Obtiene las claves de ambos participantes de un chat privado.
+ * Verifica que el solicitante sea miembro del chat.
+ * Devuelve array de { user_id, identity_key } para los dos participantes.
+ */
+async function findChatParticipantKeys(chatId, requesterId) {
+  return query(
+    `SELECT dk.user_id, dk.identity_key, dk.key_version
+     FROM ChatMembers cm
+     JOIN E2EDeviceKeys dk ON dk.user_id = cm.user_id
+     WHERE cm.chat_id = @chatId
+       AND cm.is_active = 1
+       AND EXISTS (
+         SELECT 1 FROM ChatMembers cm2
+         WHERE cm2.chat_id = @chatId
+           AND cm2.user_id = @requesterId
+           AND cm2.is_active = 1
+       )
+     ORDER BY cm.user_id ASC`,
+    [
+      { name: 'chatId',      type: sql.Int, value: chatId },
+      { name: 'requesterId', type: sql.Int, value: requesterId },
+    ]
+  );
+}
+
+module.exports = { upsertKeyBundle, findKeyBundle, hasKeyBundle, findKeyBundlesBatch, findChatParticipantKeys };

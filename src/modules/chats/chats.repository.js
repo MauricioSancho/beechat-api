@@ -222,6 +222,30 @@ async function clearMessages(chatId) {
   );
 }
 
+/**
+ * Devuelve el timestamp de la última actividad relevante para el usuario:
+ * - Último join a un chat (para detectar grupos nuevos o que te agregaron)
+ * - Último mensaje en cualquier chat donde el usuario es miembro
+ * Query ultra-ligera — usada para polling de baja latencia.
+ */
+async function getLatestActivity(userId) {
+  return queryOne(
+    `SELECT MAX(last_ts) AS last_activity FROM (
+       SELECT MAX(cm.joined_at) AS last_ts
+       FROM ChatMembers cm
+       WHERE cm.user_id = @userId AND cm.is_active = 1
+       UNION ALL
+       SELECT MAX(m.created_at)
+       FROM Messages m
+       JOIN ChatMembers cm ON cm.chat_id = m.chat_id
+                           AND cm.user_id = @userId
+                           AND cm.is_active = 1
+       WHERE m.is_deleted = 0
+     ) sub`,
+    [{ name: 'userId', type: sql.Int, value: userId }]
+  );
+}
+
 async function isMember(chatId, userId) {
   const row = await queryOne(
     `SELECT 1 AS found FROM ChatMembers
@@ -246,4 +270,5 @@ module.exports = {
   markAllAsRead,
   clearMessages,
   isMember,
+  getLatestActivity,
 };

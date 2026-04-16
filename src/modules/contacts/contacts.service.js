@@ -39,4 +39,10 @@ async function unblockContact(blockerId, blockedId) {
   await contactsRepo.unblock(blockerId, blockedId);
 }
 
-module.exports = { listContacts, addContact, removeContact, blockContact, unblockContact };
+async function updateNickname(ownerId, contactUserId, nickname) {
+  const existing = await contactsRepo.findPair(ownerId, contactUserId);
+  if (!existing) throw ERRORS.NOT_FOUND('Contact');
+  await contactsRepo.updateNickname(ownerId, contactUserId, nickname);
+}
+
+module.exports = { listContacts, addContact, removeContact, updateNickname, blockContact, unblockContact };

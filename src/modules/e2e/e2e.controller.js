@@ -54,4 +54,15 @@ const rotateBundle = asyncHandler(async (req, res) => {
   return sendSuccess(res, result);
 });
 
-module.exports = { uploadBundle, getMyBundle, getUserBundle, getBatchBundles, rotateBundle };
+/**
+ * GET /api/v1/keys/verify/:chatId
+ * Devuelve el código de verificación E2EE del chat (ambas claves unidas + hash numérico).
+ * Ambos participantes obtienen el mismo código → pueden compararlo para verificar.
+ */
+const getChatVerificationCode = asyncHandler(async (req, res) => {
+  const chatId = parseInt(req.params.chatId, 10);
+  const result = await e2eService.getChatVerificationCode(chatId, req.user.id);
+  return sendSuccess(res, result); // null = algún participante sin E2EE
+});
+
+module.exports = { uploadBundle, getMyBundle, getUserBundle, getBatchBundles, rotateBundle, getChatVerificationCode };

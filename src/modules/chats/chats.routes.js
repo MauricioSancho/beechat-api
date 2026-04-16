@@ -106,6 +106,7 @@ router.use(authMiddleware);
  */
 
 router.get('/',                         controller.listChats);
+router.get('/latest',                   controller.getLatestActivity);
 router.post('/private', createPrivateChatValidator, controller.createPrivateChat);
 router.get('/:chatId',                  controller.getChatById);
 router.delete('/:chatId',               controller.deleteChat);

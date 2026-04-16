@@ -195,6 +195,16 @@ async function markCodeAsUsed(codeId) {
   );
 }
 
+async function updatePassword(userId, passwordHash) {
+  return execute(
+    `UPDATE Users SET password_hash = @passwordHash, updated_at = GETUTCDATE() WHERE id = @userId`,
+    [
+      { name: 'userId',       type: sql.Int,        value: userId },
+      { name: 'passwordHash', type: sql.VarChar(255), value: passwordHash },
+    ]
+  );
+}
+
 module.exports = {
   findUserByIdentifier,
   findUserById,
@@ -215,4 +225,5 @@ module.exports = {
   findActiveVerificationCode,
   incrementCodeAttempts,
   markCodeAsUsed,
+  updatePassword,
 };

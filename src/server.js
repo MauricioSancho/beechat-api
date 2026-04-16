@@ -7,6 +7,7 @@ const http = require('http');
 const app  = require('./app');
 const { connect, disconnect } = require('./database/connection');
 const logger = require('./utils/logger');
+const { startStoryScheduler, stopStoryScheduler } = require('./utils/story.scheduler');
 
 const PORT = process.env.PORT || 3000;
 
@@ -43,7 +44,10 @@ async function startServer() {
     // 1. Conectar a la base de datos primero (fail-fast)
     await connect();
 
-    // 2. Levantar el servidor HTTP
+    // 2. Iniciar scheduler de limpieza de stories expiradas
+    startStoryScheduler();
+
+    // 3. Levantar el servidor HTTP
     httpServer.listen(PORT, () => {
       logger.info('================================================');
       logger.info(`🐝 BeeChat API running on port ${PORT}`);
@@ -67,6 +71,7 @@ async function shutdown(signal) {
 
   httpServer.close(async () => {
     logger.info('HTTP server closed.');
+    stopStoryScheduler();
     await disconnect();
     logger.info('Database pool closed. Goodbye 🐝');
     process.exit(0);

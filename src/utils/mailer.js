@@ -103,4 +103,28 @@ async function sendVerificationCode({ to, displayName, code }) {
   });
 }
 
-module.exports = { initMailer, sendMail, sendVerificationCode };
+/**
+ * Plantilla: código de recuperación de contraseña
+ */
+async function sendPasswordResetCode({ to, displayName, code }) {
+  return sendMail({
+    to,
+    subject: '🐝 Recuperar contraseña BeeChat',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #f9f9f9; border-radius: 12px;">
+        <h2 style="color: #f5a623; margin-bottom: 8px;">BeeChat 🐝</h2>
+        <p style="color: #333; font-size: 16px;">Hola <strong>${displayName || 'usuario'}</strong>,</p>
+        <p style="color: #555;">Recibimos una solicitud para restablecer tu contraseña. Tu código es:</p>
+        <div style="background: #fff; border: 2px solid #f5a623; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+          <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #333;">${code}</span>
+        </div>
+        <p style="color: #888; font-size: 13px;">⏱ Válido por <strong>15 minutos</strong>. Máximo 5 intentos.</p>
+        <p style="color: #888; font-size: 13px;">Si no solicitaste esto, ignora este correo. Tu contraseña no cambiará.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+        <p style="color: #bbb; font-size: 12px; text-align: center;">BeeChat — No respondas a este correo</p>
+      </div>
+    `,
+  });
+}
+
+module.exports = { initMailer, sendMail, sendVerificationCode, sendPasswordResetCode };

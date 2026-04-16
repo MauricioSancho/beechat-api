@@ -81,4 +81,16 @@ async function unblock(blockerId, blockedId) {
   );
 }
 
-module.exports = { findAllByOwner, findPair, create, remove, isBlocked, block, unblock };
+async function updateNickname(ownerId, contactUserId, nickname) {
+  return execute(
+    `UPDATE Contacts SET nickname = @nickname, updated_at = GETUTCDATE()
+     WHERE owner_id = @ownerId AND contact_user_id = @contactUserId`,
+    [
+      { name: 'ownerId',       type: sql.Int,           value: ownerId },
+      { name: 'contactUserId', type: sql.Int,           value: contactUserId },
+      { name: 'nickname',      type: sql.NVarChar(100), value: nickname || null },
+    ]
+  );
+}
+
+module.exports = { findAllByOwner, findPair, create, remove, updateNickname, isBlocked, block, unblock };

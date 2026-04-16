@@ -67,6 +67,11 @@ async function clearChatHistory(chatId, userId) {
   await chatsRepo.clearMessages(chatId);
 }
 
+async function getLatestActivity(userId) {
+  const row = await chatsRepo.getLatestActivity(userId);
+  return row?.last_activity ?? null;
+}
+
 module.exports = {
   listChats,
   createOrGetPrivateChat,
@@ -76,4 +81,5 @@ module.exports = {
   pinChat,
   markChatAsRead,
   clearChatHistory,
+  getLatestActivity,
 };

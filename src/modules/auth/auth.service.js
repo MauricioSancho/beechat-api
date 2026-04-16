@@ -9,7 +9,7 @@ const {
 } = require('../../utils/token.helper');
 const { jwtConfig } = require('../../config/jwt.config');
 const { ERRORS, BCRYPT_ROUNDS } = require('../../shared/constants');
-const { sendVerificationCode } = require('../../utils/mailer');
+const { sendVerificationCode, sendPasswordResetCode } = require('../../utils/mailer');
 const { sendSmsVerificationCode } = require('../../utils/sms');
 const logger = require('../../utils/logger');
 
@@ -259,6 +259,109 @@ async function resendVerificationCode(userId) {
   }
 }
 
+/**
+ * Paso 1: Solicitar código de recuperación de contraseña.
+ * Envía OTP por email (siempre) y por SMS (si RESET_PASSWORD_SMS_ENABLED=true).
+ * Siempre responde con éxito para no revelar si el usuario existe.
+ */
+async function forgotPassword({ identifier }) {
+  const normalizedIdentifier = identifier.startsWith('+')
+    ? identifier.replace(/[\s\-]/g, '')
+    : identifier.trim().toLowerCase();
+
+  const user = await authRepo.findUserByIdentifier(normalizedIdentifier);
+
+  // Respuesta genérica aunque no exista el usuario (evita enumeración de cuentas)
+  if (!user || !user.is_active) return;
+
+  const otpCode = generateOtpCode();
+  const codeHash = hashCode(otpCode);
+  await authRepo.saveVerificationCode({
+    userId:    user.id,
+    codeHash,
+    purpose:   'reset_password',
+    expiresAt: expiresInMinutes(15),
+  });
+
+  // Enviar por email si tiene
+  if (user.email) {
+    sendPasswordResetCode({
+      to: user.email,
+      displayName: user.display_name,
+      code: otpCode,
+    }).catch(() => {});
+  }
+
+  // Enviar por SMS si está habilitado y tiene teléfono
+  const smsEnabled = process.env.RESET_PASSWORD_SMS_ENABLED === 'true';
+  if (smsEnabled && user.phone) {
+    sendSmsVerificationCode({ to: user.phone, code: otpCode })
+      .catch((err) => logger.warn(`SMS reset no enviado a ${user.phone}: ${err.message}`));
+  }
+}
+
+/**
+ * Paso 2: Verificar el código OTP de recuperación.
+ * Devuelve un resetToken firmado (JWT corto, 10 min) para usar en el paso 3.
+ */
+async function verifyResetCode({ identifier, code }) {
+  const normalizedIdentifier = identifier.startsWith('+')
+    ? identifier.replace(/[\s\-]/g, '')
+    : identifier.trim().toLowerCase();
+
+  const user = await authRepo.findUserByIdentifier(normalizedIdentifier);
+  if (!user) throw ERRORS.BAD_REQUEST('Código inválido o expirado');
+
+  const record = await authRepo.findActiveVerificationCode(user.id, 'reset_password');
+  if (!record) throw ERRORS.BAD_REQUEST('Código inválido o expirado');
+
+  if (record.attempts >= record.max_attempts) {
+    throw ERRORS.BAD_REQUEST('Demasiados intentos fallidos. Solicita un nuevo código.');
+  }
+
+  const codeHash = hashCode(code);
+  if (codeHash !== record.code_hash) {
+    await authRepo.incrementCodeAttempts(record.id);
+    const remaining = record.max_attempts - record.attempts - 1;
+    throw ERRORS.BAD_REQUEST(`Código incorrecto. ${remaining} intento(s) restante(s).`);
+  }
+
+  await authRepo.markCodeAsUsed(record.id);
+
+  // Generar resetToken firmado con propósito explícito (válido 10 minutos)
+  const jwt = require('jsonwebtoken');
+  const resetToken = jwt.sign(
+    { sub: user.id, purpose: 'reset_password' },
+    jwtConfig.accessSecret,
+    { expiresIn: '10m' }
+  );
+  return { resetToken, expiresIn: 600 };
+}
+
+/**
+ * Paso 3: Restablecer la contraseña con el resetToken obtenido en el paso 2.
+ */
+async function resetPassword({ resetToken, newPassword }) {
+  let decoded;
+  try {
+    const jwt = require('jsonwebtoken');
+    decoded = jwt.verify(resetToken, jwtConfig.accessSecret);
+  } catch {
+    throw ERRORS.UNAUTHORIZED('Token inválido o expirado');
+  }
+
+  if (decoded.purpose !== 'reset_password') {
+    throw ERRORS.UNAUTHORIZED('Token inválido');
+  }
+
+  const userId = decoded.sub; // sub contiene el user id
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await authRepo.updatePassword(userId, passwordHash);
+
+  // Revocar todas las sesiones activas por seguridad
+  await authRepo.revokeAllUserTokens(userId);
+}
+
 module.exports = {
   register,
   login,
@@ -266,4 +369,7 @@ module.exports = {
   refreshAccessToken,
   verifyAccount,
   resendVerificationCode,
+  forgotPassword,
+  verifyResetCode,
+  resetPassword,
 };

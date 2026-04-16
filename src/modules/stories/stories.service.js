@@ -17,10 +17,16 @@ async function listStories(userId) {
         user_id: row.user_id,
         display_name: row.display_name,
         avatar_url: row.avatar_url,
+        latest_at: row.created_at,
         stories: [],
       });
     }
-    groupMap.get(row.user_id).stories.push({
+    const group = groupMap.get(row.user_id);
+    // Actualizar latest_at si esta story es más reciente
+    if (new Date(row.created_at) > new Date(group.latest_at)) {
+      group.latest_at = row.created_at;
+    }
+    group.stories.push({
       id: row.id,
       user_id: row.user_id,
       content_type: row.content_type,
@@ -33,7 +39,25 @@ async function listStories(userId) {
       viewed_by_me: row.viewed_by_me === 1,
     });
   }
-  return Array.from(groupMap.values());
+
+  const groups = Array.from(groupMap.values());
+
+  groups.sort((a, b) => {
+    // 1. El propio usuario siempre de primero
+    if (a.user_id === userId) return -1;
+    if (b.user_id === userId) return 1;
+
+    // 2. Grupos con stories NO vistas antes que los ya vistos
+    const aAllSeen = a.stories.every((s) => s.viewed_by_me);
+    const bAllSeen = b.stories.every((s) => s.viewed_by_me);
+    if (!aAllSeen && bAllSeen) return -1;
+    if (aAllSeen && !bAllSeen) return 1;
+
+    // 3. Dentro de cada categoría, el más reciente primero
+    return new Date(b.latest_at) - new Date(a.latest_at);
+  });
+
+  return groups;
 }
 
 async function deleteStory(storyId, userId) {

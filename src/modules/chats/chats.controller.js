@@ -45,4 +45,10 @@ const clearHistory = asyncHandler(async (req, res) => {
   return sendMessage(res, 'Chat history cleared');
 });
 
-module.exports = { listChats, createPrivateChat, getChatById, deleteChat, archiveChat, pinChat, markAsRead, clearHistory };
+// GET /chats/latest — timestamp de última actividad del usuario (ultra-ligero)
+const getLatestActivity = asyncHandler(async (req, res) => {
+  const lastActivity = await chatsService.getLatestActivity(req.user.id);
+  return sendSuccess(res, { lastActivity: lastActivity ?? null });
+});
+
+module.exports = { listChats, createPrivateChat, getChatById, deleteChat, archiveChat, pinChat, markAsRead, clearHistory, getLatestActivity };

@@ -67,8 +67,38 @@ const verifyAccountValidator = [
   validate,
 ];
 
+const forgotPasswordValidator = [
+  body('identifier')
+    .notEmpty().withMessage('Email o teléfono es requerido'),
+  validate,
+];
+
+const verifyResetCodeValidator = [
+  body('identifier')
+    .notEmpty().withMessage('Email o teléfono es requerido'),
+  body('code')
+    .notEmpty().withMessage('Código es requerido')
+    .isLength({ min: 6, max: 6 }).withMessage('El código debe tener 6 dígitos'),
+  validate,
+];
+
+const resetPasswordValidator = [
+  body('resetToken')
+    .notEmpty().withMessage('Reset token es requerido'),
+  body('newPassword')
+    .notEmpty().withMessage('La nueva contraseña es requerida')
+    .isLength({ min: 8 }).withMessage('Mínimo 8 caracteres')
+    .matches(/[A-Z]/).withMessage('Debe contener al menos una mayúscula')
+    .matches(/[0-9]/).withMessage('Debe contener al menos un número')
+    .matches(/[^A-Za-z0-9]/).withMessage('Debe contener al menos un carácter especial'),
+  validate,
+];
+
 module.exports = {
   registerValidator,
   loginValidator,
   verifyAccountValidator,
+  forgotPasswordValidator,
+  verifyResetCodeValidator,
+  resetPasswordValidator,
 };
