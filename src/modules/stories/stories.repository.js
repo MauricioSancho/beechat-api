@@ -122,4 +122,27 @@ async function deactivateExpired() {
   return result?.rowsAffected?.[0] ?? 0;
 }
 
-module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute, deactivateExpired };
+async function getLatestActivity(userId) {
+  return queryOne(
+    `SELECT MAX(s.created_at) AS last_activity
+     FROM Stories s
+     WHERE s.is_active = 1
+       AND s.expires_at > GETUTCDATE()
+       AND (
+         s.user_id = @userId
+         OR (
+           EXISTS (
+             SELECT 1 FROM Contacts c
+             WHERE c.owner_id = @userId AND c.contact_user_id = s.user_id AND c.is_active = 1
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM StoryMutes sm
+             WHERE sm.user_id = @userId AND sm.muted_user_id = s.user_id
+           )
+         )
+       )`,
+    [{ name: 'userId', type: sql.Int, value: userId }]
+  );
+}
+
+module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute, deactivateExpired, getLatestActivity };

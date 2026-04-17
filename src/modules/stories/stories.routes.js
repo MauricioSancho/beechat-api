@@ -103,6 +103,7 @@ router.use(authMiddleware);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 
+router.get('/latest',                                                   controller.getLatestActivity);
 router.post('/',                    uploadImage, createStoryValidator, controller.createStory);
 router.get('/',                                                         controller.listStories);
 router.delete('/:storyId',                                              controller.deleteStory);

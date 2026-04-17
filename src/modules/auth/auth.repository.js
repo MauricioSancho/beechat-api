@@ -1,4 +1,4 @@
-const { query, queryOne, execute, sql } = require('../../database/query');
+const { query, queryOne, execute, withTransaction, sql } = require('../../database/query');
 
 /**
  * Busca un usuario por teléfono o email (para login con cualquiera de los dos)
@@ -141,27 +141,73 @@ async function markUserVerified(userId) {
 // ---- Verification Codes (OTP) ----
 
 async function saveVerificationCode({ userId, codeHash, purpose, expiresAt }) {
-  // Invalidar códigos anteriores del mismo propósito antes de crear uno nuevo
-  await execute(
-    `UPDATE VerificationCodes
-     SET used_at = GETUTCDATE()
-     WHERE user_id = @userId AND purpose = @purpose AND used_at IS NULL`,
-    [
-      { name: 'userId',  type: sql.Int,        value: userId },
-      { name: 'purpose', type: sql.VarChar(30), value: purpose },
-    ]
-  );
+  return withTransaction(async ({ execute: txExec }) => {
+    // Invalidar códigos anteriores del mismo propósito antes de crear uno nuevo
+    await txExec(
+      `UPDATE VerificationCodes
+       SET used_at = GETUTCDATE()
+       WHERE user_id = @userId AND purpose = @purpose AND used_at IS NULL`,
+      [
+        { name: 'userId',  type: sql.Int,        value: userId },
+        { name: 'purpose', type: sql.VarChar(30), value: purpose },
+      ]
+    );
+    return txExec(
+      `INSERT INTO VerificationCodes (user_id, code_hash, purpose, expires_at)
+       VALUES (@userId, @codeHash, @purpose, @expiresAt)`,
+      [
+        { name: 'userId',    type: sql.Int,        value: userId },
+        { name: 'codeHash',  type: sql.VarChar(64), value: codeHash },
+        { name: 'purpose',   type: sql.VarChar(30), value: purpose },
+        { name: 'expiresAt', type: sql.DateTime,    value: expiresAt },
+      ]
+    );
+  });
+}
 
-  return execute(
-    `INSERT INTO VerificationCodes (user_id, code_hash, purpose, expires_at)
-     VALUES (@userId, @codeHash, @purpose, @expiresAt)`,
-    [
-      { name: 'userId',    type: sql.Int,        value: userId },
-      { name: 'codeHash',  type: sql.VarChar(64), value: codeHash },
-      { name: 'purpose',   type: sql.VarChar(30), value: purpose },
-      { name: 'expiresAt', type: sql.DateTime,    value: expiresAt },
-    ]
-  );
+/**
+ * Crea el usuario, asigna el rol y guarda el código OTP en una sola transacción atómica.
+ * Si cualquiera de los tres pasos falla, se hace rollback de todo.
+ */
+async function registerUserAtomic({ phone, email, username, passwordHash, display_name, roleId, codeHash, expiresAt }) {
+  return withTransaction(async ({ queryOne: txOne, execute: txExec }) => {
+    const user = await txOne(
+      `INSERT INTO Users (phone, email, username, password_hash, display_name, created_at, updated_at)
+       OUTPUT INSERTED.id, INSERTED.uuid, INSERTED.phone, INSERTED.email,
+              INSERTED.username, INSERTED.display_name, INSERTED.is_verified,
+              INSERTED.is_active, INSERTED.created_at
+       VALUES (@phone, @email, @username, @passwordHash, @displayName, GETUTCDATE(), GETUTCDATE())`,
+      [
+        { name: 'phone',        type: sql.VarChar(20),   value: phone || null },
+        { name: 'email',        type: sql.VarChar(255),  value: email || null },
+        { name: 'username',     type: sql.VarChar(50),   value: username },
+        { name: 'passwordHash', type: sql.VarChar(255),  value: passwordHash },
+        { name: 'displayName',  type: sql.NVarChar(100), value: display_name },
+      ]
+    );
+
+    if (roleId) {
+      await txExec(
+        `INSERT INTO UserRoles (user_id, role_id) VALUES (@userId, @roleId)`,
+        [
+          { name: 'userId', type: sql.Int, value: user.id },
+          { name: 'roleId', type: sql.Int, value: roleId },
+        ]
+      );
+    }
+
+    await txExec(
+      `INSERT INTO VerificationCodes (user_id, code_hash, purpose, expires_at)
+       VALUES (@userId, @codeHash, 'verify_account', @expiresAt)`,
+      [
+        { name: 'userId',    type: sql.Int,        value: user.id },
+        { name: 'codeHash',  type: sql.VarChar(64), value: codeHash },
+        { name: 'expiresAt', type: sql.DateTime,    value: expiresAt },
+      ]
+    );
+
+    return user;
+  });
 }
 
 async function findActiveVerificationCode(userId, purpose) {
@@ -213,6 +259,7 @@ module.exports = {
   findUserByUsername,
   createUser,
   assignRoleToUser,
+  registerUserAtomic,
   findRoleByName,
   getUserRoles,
   saveRefreshToken,

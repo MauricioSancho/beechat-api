@@ -56,6 +56,7 @@ router.use(aiLimiter);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 
+router.post('/chat',      controller.chat);
 router.post('/suggest',   controller.suggestReply);
 router.post('/summarize', controller.summarize);
 

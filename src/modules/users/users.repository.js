@@ -24,11 +24,12 @@ async function findByPhone(phone) {
   );
 }
 
-async function updateProfile(id, { displayName, username }) {
+async function updateProfile(id, { displayName, username, bio }) {
   return queryOne(
     `UPDATE Users
      SET display_name = COALESCE(@displayName, display_name),
          username     = COALESCE(@username, username),
+         bio          = CASE WHEN @bio IS NULL AND @bioSent = 0 THEN bio ELSE @bio END,
          updated_at   = GETUTCDATE()
      OUTPUT INSERTED.id, INSERTED.uuid, INSERTED.phone, INSERTED.email,
             INSERTED.username, INSERTED.display_name, INSERTED.bio,
@@ -36,9 +37,11 @@ async function updateProfile(id, { displayName, username }) {
             INSERTED.last_seen, INSERTED.updated_at
      WHERE id = @id AND deleted_at IS NULL`,
     [
-      { name: 'id',          type: sql.Int,        value: id },
+      { name: 'id',          type: sql.Int,           value: id },
       { name: 'displayName', type: sql.NVarChar(100), value: displayName || null },
-      { name: 'username',    type: sql.VarChar(50), value: username || null },
+      { name: 'username',    type: sql.VarChar(50),   value: username || null },
+      { name: 'bio',         type: sql.NVarChar(300), value: bio !== undefined ? (bio.trim() || null) : null },
+      { name: 'bioSent',     type: sql.Bit,           value: bio !== undefined ? 1 : 0 },
     ]
   );
 }

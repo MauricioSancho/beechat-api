@@ -13,4 +13,10 @@ const summarize = asyncHandler(async (req, res) => {
   return sendSuccess(res, result);
 });
 
-module.exports = { suggestReply, summarize };
+const chat = asyncHandler(async (req, res) => {
+  const { message, history } = req.body;
+  const result = await beeAssistService.chatMessage({ message: message || '', history: history || [] });
+  return sendSuccess(res, result);
+});
+
+module.exports = { suggestReply, summarize, chat };

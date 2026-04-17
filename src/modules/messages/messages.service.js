@@ -46,26 +46,19 @@ async function sendMessage(chatId, senderId, { content, messageType, replyToId, 
 
   if (!content && !attachment) throw ERRORS.BAD_REQUEST('Message must have content or an attachment');
 
-  const message = await messagesRepo.create({
+  const participants = await chatsRepo.findParticipants(chatId);
+
+  // Inserta mensaje + adjunto + estados en una sola transacción atómica
+  const message = await messagesRepo.createWithStatuses({
     chatId,
     senderId,
     content,
     messageType: messageType || 'text',
     replyToId,
+    attachment: attachment || null,
+    participantIds: participants.map((p) => p.id),
   });
 
-  // Guardar adjunto si lo hay
-  if (attachment) {
-    await messagesRepo.createAttachment(message.id, attachment);
-  }
-
-  // Registrar 'sent' para el remitente y para cada destinatario (para unread count y estados)
-  const participants = await chatsRepo.findParticipants(chatId);
-  await Promise.all(
-    participants.map((p) => messagesRepo.createStatus(message.id, p.id, p.id === senderId ? 'sent' : 'sent'))
-  );
-
-  // Actualizar timestamp del chat
   messagesRepo.updateChatTimestamp(chatId).catch(() => {});
 
   return attachment ? { ...message, attachment } : message;

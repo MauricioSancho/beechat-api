@@ -7,13 +7,13 @@ async function getProfile(userId) {
   return user;
 }
 
-async function updateProfile(userId, { displayName, username }) {
+async function updateProfile(userId, { displayName, username, bio }) {
   if (username) {
     const existing = await usersRepo.findByUsername(username);
     if (existing && existing.id !== userId) throw ERRORS.CONFLICT('Username is already taken');
   }
 
-  const updated = await usersRepo.updateProfile(userId, { displayName, username });
+  const updated = await usersRepo.updateProfile(userId, { displayName, username, bio });
   if (!updated) throw ERRORS.NOT_FOUND('User');
   return updated;
 }

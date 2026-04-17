@@ -1,4 +1,4 @@
-const { query, queryOne, execute, sql } = require('../../database/query');
+const { query, queryOne, execute, withTransaction, sql } = require('../../database/query');
 
 async function findByChatId(chatId, userId, { offset, limit }) {
   const [rows, countRow] = await Promise.all([
@@ -109,6 +109,56 @@ async function createStatus(messageId, userId, status = 'sent') {
   );
 }
 
+/**
+ * Inserta un mensaje, su adjunto (opcional) y los estados para todos los participantes
+ * en una sola transacción atómica. Si cualquier paso falla se hace rollback completo.
+ */
+async function createWithStatuses({ chatId, senderId, content, messageType, replyToId, attachment, participantIds }) {
+  return withTransaction(async ({ queryOne: txOne, execute: txExec }) => {
+    const message = await txOne(
+      `INSERT INTO Messages (chat_id, sender_id, content, message_type, reply_to_id, created_at, updated_at)
+       OUTPUT INSERTED.id, INSERTED.uuid, INSERTED.chat_id, INSERTED.sender_id,
+              INSERTED.content, INSERTED.message_type, INSERTED.reply_to_id,
+              INSERTED.is_edited, INSERTED.created_at
+       VALUES (@chatId, @senderId, @content, @messageType, @replyToId, GETUTCDATE(), GETUTCDATE())`,
+      [
+        { name: 'chatId',      type: sql.Int,              value: chatId },
+        { name: 'senderId',    type: sql.Int,              value: senderId },
+        { name: 'content',     type: sql.NVarChar(sql.MAX), value: content || null },
+        { name: 'messageType', type: sql.VarChar(15),       value: messageType || 'text' },
+        { name: 'replyToId',   type: sql.Int,              value: replyToId || null },
+      ]
+    );
+
+    if (attachment) {
+      await txExec(
+        `INSERT INTO MessageAttachments (message_id, file_url, file_type, file_size, file_name, created_at)
+         VALUES (@messageId, @fileUrl, @fileType, @fileSize, @fileName, GETUTCDATE())`,
+        [
+          { name: 'messageId', type: sql.Int,           value: message.id },
+          { name: 'fileUrl',   type: sql.VarChar(500),   value: attachment.fileUrl },
+          { name: 'fileType',  type: sql.VarChar(50),    value: attachment.fileType || null },
+          { name: 'fileSize',  type: sql.BigInt,         value: attachment.fileSize || null },
+          { name: 'fileName',  type: sql.NVarChar(255),  value: attachment.fileName || null },
+        ]
+      );
+    }
+
+    for (const participantId of participantIds) {
+      await txExec(
+        `INSERT INTO MessageStatus (message_id, user_id, status, updated_at)
+         VALUES (@messageId, @userId, 'sent', GETUTCDATE())`,
+        [
+          { name: 'messageId', type: sql.Int, value: message.id },
+          { name: 'userId',    type: sql.Int, value: participantId },
+        ]
+      );
+    }
+
+    return message;
+  });
+}
+
 async function updateContent(messageId, senderId, content) {
   return execute(
     `UPDATE Messages
@@ -165,6 +215,7 @@ module.exports = {
   create,
   createAttachment,
   createStatus,
+  createWithStatuses,
   markAsDelivered,
   updateContent,
   softDelete,

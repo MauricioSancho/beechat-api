@@ -45,4 +45,10 @@ const unmuteUser = asyncHandler(async (req, res) => {
   return sendMessage(res, 'User stories unmuted');
 });
 
-module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser };
+// GET /stories/latest — timestamp de última story visible (ultra-ligero para polling)
+const getLatestActivity = asyncHandler(async (req, res) => {
+  const lastActivity = await storiesService.getLatestActivity(req.user.id);
+  return sendSuccess(res, { lastActivity });
+});
+
+module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getLatestActivity };

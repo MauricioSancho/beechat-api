@@ -7,8 +7,10 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 const updateMe = asyncHandler(async (req, res) => {
-  const { displayName, username } = req.body;
-  const updated = await usersService.updateProfile(req.user.id, { displayName, username });
+  // Flutter envía display_name (snake_case); admitir ambas variantes
+  const displayName = req.body.display_name || req.body.displayName || null;
+  const { username, bio } = req.body;
+  const updated = await usersService.updateProfile(req.user.id, { displayName, username, bio });
   return sendSuccess(res, updated);
 });
 

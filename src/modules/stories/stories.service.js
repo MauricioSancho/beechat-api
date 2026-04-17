@@ -90,4 +90,9 @@ async function unmuteUser(userId, mutedUserId) {
   await storiesRepo.unmute(userId, mutedUserId);
 }
 
-module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser };
+async function getLatestActivity(userId) {
+  const row = await storiesRepo.getLatestActivity(userId);
+  return row?.last_activity ?? null;
+}
+
+module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getLatestActivity };

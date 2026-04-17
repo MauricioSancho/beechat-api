@@ -80,23 +80,16 @@ async function register({ phone, email, username, password, display_name }) {
   const existingUsername = await authRepo.findUserByUsername(username);
   if (existingUsername) throw ERRORS.CONFLICT('Username is already taken');
 
-  // Hash de contraseña
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
-  // Crear usuario
-  const user = await authRepo.createUser({ phone, email, username, passwordHash, display_name });
-
-  // Asignar rol 'user'
   const role = await authRepo.findRoleByName('user');
-  if (role) await authRepo.assignRoleToUser(user.id, role.id);
-
-  // Generar y enviar código OTP de verificación
   const otpCode = generateOtpCode();
   const codeHash = hashCode(otpCode);
-  await authRepo.saveVerificationCode({
-    userId:    user.id,
+
+  // Crea usuario + rol + código OTP en una sola transacción atómica
+  const user = await authRepo.registerUserAtomic({
+    phone, email, username, passwordHash, display_name,
+    roleId:    role?.id ?? null,
     codeHash,
-    purpose:   'verify_account',
     expiresAt: expiresInMinutes(15),
   });
 
