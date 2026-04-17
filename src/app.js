@@ -28,7 +28,6 @@ const beeAssistRoutes     = require('./modules/bee_assist/bee_assist.routes');
 const e2eRoutes           = require('./modules/e2e/e2e.routes');
 
 // Middlewares globales
-const { defaultLimiter } = require('./middlewares/rateLimiter.middleware');
 const notFoundMiddleware  = require('./middlewares/notFound.middleware');
 const errorMiddleware     = require('./middlewares/error.middleware');
 
@@ -92,11 +91,6 @@ if (process.env.NODE_ENV !== 'test') {
 // Archivos estáticos (uploads servidos públicamente)
 // ============================================================
 app.use('/uploads', express.static(path.resolve(uploadDir)));
-
-// ============================================================
-// Rate Limiting general
-// ============================================================
-app.use('/api/', defaultLimiter);
 
 // ============================================================
 // Swagger UI  →  GET /api/docs

@@ -1,9 +1,10 @@
 const rateLimit = require('express-rate-limit');
 
 // ---- Rate Limiter General ----
+// 30 usuarios simultáneos en misma red/IP universitaria → ~2000 req/min mínimo
 const defaultLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutos
-  max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
+  windowMs: 60 * 1000,  // 1 minuto
+  max: 3000,            // 3000 requests por minuto por IP
   standardHeaders: true,
   legacyHeaders: false,
   message: {
