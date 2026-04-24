@@ -12,6 +12,15 @@ const getDashboard = asyncHandler(async (req, res) => {
   return sendSuccess(res, stats);
 });
 
+const getReq1Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq1Stats()));
+const getReq2Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq2Stats()));
+const getReq3Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq3Stats()));
+const getReq4Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq4Stats()));
+const getReq5Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq5Stats()));
+const getReq6Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq6Stats()));
+const getReq7Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq7Stats()));
+const getReq8Stats = asyncHandler(async (req, res) => sendSuccess(res, await adminService.getReq8Stats()));
+
 const listUsers = asyncHandler(async (req, res) => {
   const { users, total, page, limit } = await adminService.listUsers(req.query);
   return sendPaginated(res, users, total, page, limit);
@@ -28,4 +37,12 @@ const getActivity = asyncHandler(async (req, res) => {
   return sendSuccess(res, activity);
 });
 
-module.exports = { login, getDashboard, listUsers, toggleUserStatus, getActivity };
+module.exports = {
+  login,
+  getDashboard,
+  getReq1Stats, getReq2Stats, getReq3Stats, getReq4Stats,
+  getReq5Stats, getReq6Stats, getReq7Stats, getReq8Stats,
+  listUsers,
+  toggleUserStatus,
+  getActivity,
+};

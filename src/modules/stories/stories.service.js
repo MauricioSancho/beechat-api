@@ -95,4 +95,8 @@ async function getLatestActivity(userId) {
   return row?.last_activity ?? null;
 }
 
-module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getLatestActivity };
+async function getMutedUsers(userId) {
+  return storiesRepo.getMuted(userId);
+}
+
+module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getMutedUsers, getLatestActivity };

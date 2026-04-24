@@ -145,4 +145,15 @@ async function getLatestActivity(userId) {
   );
 }
 
-module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute, deactivateExpired, getLatestActivity };
+async function getMuted(userId) {
+  return query(
+    `SELECT sm.muted_user_id AS user_id, u.display_name, u.username, u.avatar_url
+     FROM StoryMutes sm
+     JOIN Users u ON u.id = sm.muted_user_id
+     WHERE sm.user_id = @userId
+     ORDER BY u.display_name ASC`,
+    [{ name: 'userId', type: sql.Int, value: userId }]
+  );
+}
+
+module.exports = { create, findVisible, findById, deactivate, addView, findViewers, mute, unmute, getMuted, deactivateExpired, getLatestActivity };

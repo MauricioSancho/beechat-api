@@ -106,6 +106,7 @@ router.use(authMiddleware);
 router.get('/latest',                                                   controller.getLatestActivity);
 router.post('/',                    uploadImage, createStoryValidator, controller.createStory);
 router.get('/',                                                         controller.listStories);
+router.get('/muted',                                                    controller.getMutedUsers);
 router.delete('/:storyId',                                              controller.deleteStory);
 router.post('/:storyId/view',                                           controller.markViewed);
 router.get('/:storyId/viewers',                                         controller.getViewers);

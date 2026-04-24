@@ -51,4 +51,9 @@ const getLatestActivity = asyncHandler(async (req, res) => {
   return sendSuccess(res, { lastActivity });
 });
 
-module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getLatestActivity };
+const getMutedUsers = asyncHandler(async (req, res) => {
+  const muted = await storiesService.getMutedUsers(req.user.id);
+  return sendSuccess(res, muted);
+});
+
+module.exports = { createStory, listStories, deleteStory, markViewed, getViewers, muteUser, unmuteUser, getMutedUsers, getLatestActivity };
